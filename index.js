@@ -2,6 +2,7 @@ window.onload = () => {
     const table = {
         init: function () {
             this.todoList();
+            this.Pagination();
         },
         todoList: function () {
             pullData();
@@ -22,6 +23,12 @@ window.onload = () => {
             const btnComplete = getElement("#complete");
             const btnNo = getElement("#no");
             const btnYes = getElement("#yes");
+            const deleteForm = getElement("#form-delete");
+            const editForm = getElement("#form-add-edit");
+
+            btnNo.addEventListener("click", () => {
+                deleteForm.classList.remove("active");
+            });
 
             function toggleActive(element) {
                 const crr = getElement(element);
@@ -57,39 +64,72 @@ window.onload = () => {
             /**
              * Add user to localStorage
              */
-            function pushData() {
+            // function pushData() {
+            //     const data = getInputData(fields);
+            //     const mailData = JSON.parse(localStorage.getItem("data"));
+            //     if (mailData === null) {
+            //         mailData = [];
+            //     }
+            //     newData = [...mailData];
+            //     newData.push(data);
+
+            //     localStorage.setItem("data", JSON.stringify(newData));
+            // }
+
+            async function pushData() {
                 const data = getInputData(fields);
-                const mailData = JSON.parse(localStorage.getItem("data"));
+                const fetchedData = await axios.get(
+                    "http://localhost:3000/users"
+                );
+                const mailData = fetchedData.data;
+                console.log(mailData);
+
                 if (mailData === null) {
                     mailData = [];
                 }
-                newData = [...mailData];
-                newData.push(data);
+                // newData = [...mailData];
+                // newData.push(data);
 
-                localStorage.setItem("data", JSON.stringify(newData));
-            }
-
-            function deleteUser(e) {
-                console.log(e.target);
-                const mailData = JSON.parse(localStorage.getItem("data"));
-                let _newData = [...mailData];
-
-                const newData = _newData.filter((user) => {
-                    return (
-                        user.id !==
-                        parseInt(e.target.closest("tr").getAttribute("id"))
-                    );
-                });
-                console.log(newData);
-                localStorage.setItem("data", JSON.stringify(newData));
+                // console.log(newData);
+                axios.post("http://localhost:3000/users", data);
             }
 
             /**
              * render userList
              * @returns action
              */
-            function pullData() {
-                const mailData = JSON.parse(localStorage.getItem("data"));
+            // function pullData() {
+            //     const mailData = JSON.parse(localStorage.getItem("data"));
+            //     if (mailData === null) {
+            //         return;
+            //     }
+            //     document.querySelector("tbody").innerHTML = "";
+            //     mailData.forEach((user, index) => {
+            //         let eleMail = document.createElement("tr");
+            //         eleMail.setAttribute("id", user.id);
+            //         let eleContent = `
+            //         <td class="id">${index + 1}</td>
+            //         <td class="title">${user.mail}</td>
+            //         <td class="des">${user.des}</td>
+            //         <td class="author">${user.author}</td>
+            //         <td class="edit">
+            //         <i class="fas fa-edit" aria-hidden="true"></i>
+            //         </td>
+            //         <td class="trash">
+            //         <i class="fas fa-trash-alt" aria-hidden="true"></i>
+            //         </td>
+            //         `;
+            //         eleMail.innerHTML = eleContent;
+            //         document.querySelector("tbody").append(eleMail);
+            //     });
+            // }
+
+            async function pullData() {
+                const fetchedData = await axios.get(
+                    "http://localhost:3000/users"
+                );
+                const mailData = fetchedData.data;
+                console.log(mailData);
                 if (mailData === null) {
                     return;
                 }
@@ -114,58 +154,63 @@ window.onload = () => {
                 });
             }
 
-            const trashContainer = getElement("trash");
-
             // delete User
-            trashContainer.forEach((btn) => {
-                btn.addEventListener("click", (e) => {
-                    toggleActive("#form-delete");
-                    let confirmDel = false;
-                    const handleDeletion = function () {
-                        if (confirmDel) {
-                            deleteUser(e);
-                            confirmDel = false;
-                            toggleActive("#form-delete");
-                            location.reload();
-                        }
-                    };
-                    trashBtn = getElement("trash");
-                    btnYes.addEventListener("click", function () {
-                        trashBtn = getElement("trash");
-                        confirmDel = true;
-                        handleDeletion();
+            function deleteHandler(id) {
+                deleteForm.classList.remove("active");
+                deleteUser(id);
+                pullData();
+            }
+            // function deleteUser(id) {
+            //     const mailData = JSON.parse(localStorage.getItem("data"));
+            //     let _newData = [...mailData];
+
+            //     const newData = _newData.filter((user) => {
+            //         return user.id !== parseInt(id);
+            //     });
+            //     console.log(newData);
+            //     localStorage.setItem("data", JSON.stringify(newData));
+            // }
+
+            async function deleteUser(id) {
+                try {
+                    const fetchedData = await axios.get(
+                        "http://localhost:3000/users"
+                    );
+                    const mailData = fetchedData.data;
+                    let _newData = [...mailData];
+
+                    const newData = _newData.filter((user) => {
+                        return user.id !== parseInt(id);
                     });
-                });
-                btnNo.addEventListener("click", () =>
-                    getElement("#form-delete").classList.remove("active")
-                );
-            });
+                    console.log(newData);
+                    axios.put("http://localhost:3000/users", newData);
+                } catch {
+                    console.error("An error occurred:", error);
+                }
+            }
+
             // edit user
-            const editContainer = getElement("edit");
 
-            editContainer.forEach((btn, index) => {
-                btn.addEventListener("click", () => {
-                    console.log(index);
-                    currentForm = "edit";
-                    toggleActive("#form-add-edit");
+            function editHandler(id) {
+                editForm.classList.remove("active");
+                edit(id);
+                pullData();
+            }
 
-                    btnComplete.addEventListener("click", () => {
-                        if ((currentForm = "edit")) {
-                            edit(index);
-                            location.reload();
-                        }
-                    });
-                });
-            });
-
-            function edit(index) {
+            function edit(id) {
                 const dataList = JSON.parse(localStorage.getItem("data"));
 
                 let newList = [...dataList];
+                const foundUser = newList.find(
+                    (user) => parseInt(user.id) === parseInt(id)
+                );
+                console.log(newList);
+                console.log(foundUser);
 
-                newList[index].mail = getElement("#mail").value;
-                newList[index].des = getElement("#des").value;
-                newList[index].author = getElement("#author").value;
+                foundUser.mail = getElement("#mail").value;
+                foundUser.des = getElement("#des").value;
+                foundUser.author = getElement("#author").value;
+                console.log(foundUser);
 
                 localStorage.setItem("data", JSON.stringify(newList));
             }
@@ -178,7 +223,10 @@ window.onload = () => {
                         validation(function (results) {
                             if (results === true) {
                                 pushData();
-                                location.reload();
+                                pullData();
+                                getElement("#form-add-edit").classList.remove(
+                                    "active"
+                                );
                             } else {
                                 console.log(1);
                                 getElement("#form-add-edit").classList.add(
@@ -195,6 +243,26 @@ window.onload = () => {
                     }
                 });
             });
+
+            function ElemDetermine(e) {
+                const user = e.target.closest("tr");
+                const id = user.id;
+                // console.log(id);
+                if (e.target.closest(".edit")) {
+                    editForm.classList.add("active");
+                    const btnComplete = getElement("#complete");
+                    btnComplete.addEventListener("click", () =>
+                        editHandler(id)
+                    );
+                }
+                if (e.target.closest(".trash")) {
+                    deleteForm.classList.add("active");
+                    btnYes.addEventListener("click", () => deleteHandler(id));
+                }
+            }
+            const table = document.querySelector("table");
+            table.addEventListener("click", ElemDetermine);
+
             btnCancel.addEventListener("click", () =>
                 getElement("#form-add-edit").classList.remove("active")
             );
@@ -286,6 +354,77 @@ window.onload = () => {
                 }
                 init();
             }
+        },
+        Pagination: function () {
+            const _mailData = JSON.parse(localStorage.getItem("data"));
+            if (_mailData === null) {
+                return;
+            }
+            const dataArray = [..._mailData];
+            const rowsPerPage = 3;
+            let currentPage = 1;
+            const renderTableData = () => {
+                const startIndex = (currentPage - 1) * rowsPerPage;
+                const endIndex = startIndex + rowsPerPage;
+                const pageData = dataArray.slice(startIndex, endIndex);
+
+                // Render table rows for the current page data
+                const tableBody = document.querySelector("tbody");
+                tableBody.innerHTML = "";
+
+                pageData.forEach((user, index) => {
+                    let eleMail = document.createElement("tr");
+                    eleMail.setAttribute("id", user.id);
+                    let eleContent = `
+                    <td class="id">${index + 1}</td>
+                    <td class="title">${user.mail}</td>
+                    <td class="des">${user.des}</td>
+                    <td class="author">${user.author}</td>
+                    <td class="edit">
+                    <i class="fas fa-edit" aria-hidden="true"></i>
+                    </td>
+                    <td class="trash">
+                    <i class="fas fa-trash-alt" aria-hidden="true"></i>
+                    </td>
+                    `;
+                    eleMail.innerHTML = eleContent;
+                    document.querySelector("tbody").append(eleMail);
+                });
+
+                // Update pagination information
+                const currentPageElement =
+                    document.getElementById("currentPage");
+                const totalPagesElement = document.getElementById("totalPages");
+                const totalPages = Math.ceil(dataArray.length / rowsPerPage);
+
+                currentPageElement.textContent = currentPage;
+                totalPagesElement.textContent = totalPages;
+
+                const prevBtn = document.getElementById("prevBtn");
+                const nextBtn = document.getElementById("nextBtn");
+
+                prevBtn.disabled = currentPage === 1;
+                nextBtn.disabled = currentPage === totalPages;
+            };
+
+            const prevBtn = document.getElementById("prevBtn");
+            const nextBtn = document.getElementById("nextBtn");
+
+            prevBtn.addEventListener("click", () => {
+                if (currentPage > 1) {
+                    currentPage--;
+                    renderTableData();
+                }
+            });
+
+            nextBtn.addEventListener("click", () => {
+                const totalPages = Math.ceil(dataArray.length / rowsPerPage);
+                if (currentPage < totalPages) {
+                    currentPage++;
+                    renderTableData();
+                }
+            });
+            renderTableData();
         },
     };
     table.init();
